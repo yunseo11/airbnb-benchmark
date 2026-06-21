@@ -1,65 +1,50 @@
-숙소 벤치마킹.
-☁️ 연결 중...
-숙소 0개
-📝 숙소 입력
-🏠 저장 목록
-📊 비교 분석
-기본 정보
-숙소명 / 별명
-
-에어비앤비 URL
-
-지역
-성수동홍대·연남이태원·한남종로·북촌명동·중구강남·서초마포·합정용산잠실·송파기타
-숙소 유형
-원룸/스튜디오1베드룸2베드룸한옥독채복층기타
-최대 인원
-1-2명3-4명5-6명7명+
-1박 가격 (원)
-
-에어비앤비 평점
-
-리뷰 수
-
-항목별 평가 (별 클릭)
-
-시설 및 편의
-
-+ 추가
-사진
-
-추가
-에어비앤비 사진 우클릭 → 이미지 주소 복사 → 붙여넣기 · 또는 슬롯 클릭·드래그앤드롭
-
-대표 사진
-×
-
-침실/거실
-×
-
-욕실/주방
-×
-
-마당/외부
-×
-
-추가 사진
-×
-
-추가 사진
-×
-인테리어 포인트 메모
-리뷰 분석
-👍 칭찬 키워드
-
-👎 불만 키워드
-
-종합 리뷰 메모
-벤치마킹 인사이트
-내 숙소에 접목할 아이디어
-잘되는 / 안되는 이유
-📊 점수 계산
-💾 저장하기
-🔄 초기화
-🤖 AI 분석 — 잘되는 이유 & 전략 제안 ↗
-
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>숙소 벤치마킹</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F3;--surface:#fff;--border:#E4E2DC;--text:#1A1A18;--muted:#6B6A65;--hint:#AEACA6;
+  --teal:#1D9E75;--teal-light:#E1F5EE;--teal-dark:#085041;
+  --amber:#EF9F27;--amber-light:#FAEEDA;--amber-dark:#633806;
+  --blue:#378ADD;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+  --red:#E24B4A;--red-light:#FCEBEB;--red-dark:#791F1F;
+  --purple:#7C3AED;--purple-light:#EDE9FE;
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:700;color:var(--text)}.logo span{color:var(--teal)}
+.header-right{display:flex;align-items:center;gap:10px}
+.header-count{font-size:12px;color:var(--muted);background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.sync-status{font-size:11px;color:var(--muted)}
+.tab-nav{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px}
+.tab{font-size:13px;padding:12px 16px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;font-weight:500}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.container{max-width:900px;margin:0 auto;padding:24px 16px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.card-title{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.field input,.field select,.field textarea{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);background:#fff}
+.field textarea{resize:vertical;min-height:64px}
+.score-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.score-row:last-child{border-bottom:none}
+.score-label{font-size:12px;color:var(--text);width:160px;flex-shrink:0}
+.score-weight{font-size:10px;color:var(--hint);margin-left:4px}
+.stars{display:flex;gap:3px}
+.star{font-size:20px;cursor:pointer;color:var(--border);line-height:1;background:none;border:none;padding:0;transition:color 0.1s}
+.star.on{color:var(--amber)}
+.score-num{font-size:12px;font-weight:500;color:var(--muted);min-width:20px}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:13px;padding:8px 16px;border-radius:20px;background:var(--bg);color:var(--muted);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;user-select:none;font-family:inherit;font-weight:500}
+.tag:hover{border-color:var(--teal);color:var(--teal)}
+.tag.on{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal);font-weight:500}
+.btn{font-family:inherit;font-size:13px;padding:9px 18px;borde
