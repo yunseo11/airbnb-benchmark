@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>숙소 벤치마킹</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F3;--surface:#fff;--border:#E4E2DC;--text:#1A1A18;--muted:#6B6A65;--hint:#AEACA6;
+  --teal:#1D9E75;--teal-light:#E1F5EE;--teal-dark:#085041;
+  --amber:#EF9F27;--amber-light:#FAEEDA;--amber-dark:#633806;
+  --blue:#378ADD;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+  --red:#E24B4A;--red-light:#FCEBEB;--red-dark:#791F1F;
+  --purple:#7C3AED;--purple-light:#EDE9FE;
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:700;color:var(--text)}.logo span{color:var(--teal)}
+.header-right{display:flex;align-items:center;gap:10px}
+.header-count{font-size:12px;color:var(--muted);background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.sync-status{font-size:11px;color:var(--muted)}
+.tab-nav{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px}
+.tab{font-size:13px;padding:12px 16px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;font-weight:500}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.container{max-width:900px;margin:0 auto;padding:24px 16px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.card-title{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.field input,.field select,.field textarea{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);outline:none;transition:border-color 0.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);background:#fff}
+.field textarea{resize:vertical;min-height:64px}
+.score-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.score-row:last-child{border-bottom:none}
+.score-label{font-size:12px;color:var(--text);width:160px;flex-shrink:0}
+.score-weight{font-size:10px;color:var(--hint);margin-left:4px}
+.stars{display:flex;gap:3px}
+.star{font-size:20px;cursor:pointer;color:var(--border);line-height:1;background:none;border:none;padding:0;transition:color 0.1s}
+.star.on{color:var(--amber)}
+.score-num{font-size:12px;font-weight:500;color:var(--muted);min-width:20px}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:13px;padding:8px 16px;border-radius:20px;background:var(--bg);color:var(--muted);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;user-select:none;font-family:inherit;font-weight:500}
+.tag:hover{border-color:var(--teal);color:var(--teal)}
+.tag.on{background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal);font-weight:500}
+.btn{font-family:inherit;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:500;transition:all 0.15s}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-primary:hover{background:var(--teal-dark)}
+.btn-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.btn-ai{width:100%;background:var(--teal-light);color:var(--teal-dark);border-color:var(--teal);font-size:13px;font-weight:500;padding:11px;border-radius:8px;cursor:pointer;font-family:inherit;margin-top:10px;border:1px solid var(--teal);transition:all 0.15s}
+.btn-ai:hover{background:var(--teal);color:#fff}
+.btn-auto{width:100%;background:var(--purple-light);color:var(--purple);border:1px solid var(--purple);font-size:13px;font-weight:500;padding:11px;border-radius:8px;cursor:pointer;font-family:inherit;margin-bottom:14px;transition:all 0.15s}
+.btn-auto:hover{background:var(--purple);color:#fff}
+.score-summary{display:none}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.metric{background:var(--bg);border-radius:8px;padding:12px;text-align:center}
+.metric-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.metric-val{font-size:20px;font-weight:700;color:var(--text)}
+.total-row{display:flex;align-items:center;gap:14px;background:var(--bg);border-radius:8px;padding:14px 16px}
+.total-num{font-size:28px;font-weight:700;color:var(--text);min-width:80px}
+.bar-bg{flex:1;background:var(--border);border-radius:4px;height:8px}
+.bar-fg{height:8px;border-radius:4px;transition:width 0.4s ease}
+.grade{font-size:13px;font-weight:500;padding:5px 14px;border-radius:8px}
+.saved-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.saved-left{flex:1;min-width:0}
+.saved-name{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.saved-kw{font-size:11px;color:var(--hint);margin-top:3px}
+.saved-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.score-pill{font-size:15px;font-weight:700;padding:4px 12px;border-radius:8px}
+.small-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit}
+.small-btn:hover{border-color:var(--teal);color:var(--teal)}
+.compare-table{width:100%;border-collapse:collapse;font-size:12px}
+.compare-table th{text-align:left;padding:8px 10px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:11px}
+.compare-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.compare-table td.best{color:var(--teal-dark);background:var(--teal-light);font-weight:500}
+.compare-table tr:last-child td{border-bottom:none}
+.empty{text-align:center;padding:40px 0;color:var(--hint);font-size:13px}
+.region-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:var(--blue-light);color:var(--blue-dark);border:none;margin-left:6px}
+.url-link{font-size:11px;color:var(--blue);text-decoration:none;word-break:break-all}
+.url-link:hover{text-decoration:underline}
+.ai-result{background:var(--teal-light);border:1px solid var(--teal);border-radius:10px;padding:16px;margin-top:12px;font-size:13px;line-height:1.7;color:var(--teal-dark);white-space:pre-wrap;display:none}
+.ai-loading{display:none;align-items:center;gap:8px;font-size:13px;color:var(--teal);margin-top:10px}
+.spinner{width:16px;height:16px;border:2px solid var(--teal-light);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.photo-slot{aspect-ratio:4/3;background:var(--bg);border:1.5px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:var(--hint);gap:4px;position:relative;overflow:hidden;transition:border-color 0.15s}
+.photo-slot:hover{border-color:var(--teal)}
+.photo-slot.drag-over{border-color:var(--teal);background:var(--teal-light)}
+.photo-slot svg{width:20px;height:20px;stroke:var(--hint)}
+.photo-slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px}
+.photo-slot .del-btn{position:absolute;top:4px;right:4px;width:20px;height:20px;background:rgba(0,0,0,0.45);border:none;border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
+.photo-slot .del-btn:hover{background:rgba(220,50,50,0.85)}
+.photo-slot .slot-label{font-size:10px;color:var(--hint);margin-top:2px;text-align:center}
+.url-input-wrap{display:flex;gap:6px;margin-bottom:8px}
+.url-input-wrap input{flex:1;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:inherit}
+.url-input-wrap button{font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid var(--teal);background:var(--teal-light);color:var(--teal-dark);cursor:pointer;font-family:inherit;white-space:nowrap}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1A18;color:#fff;font-size:13px;padding:10px 20px;border-radius:8px;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none}
+.toast.show{opacity:1}
+/* AI 자동입력 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:24px;width:90%;max-width:560px;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.modal-desc{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.modal textarea{width:100%;height:180px;font-family:inherit;font-size:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical;outline:none}
+.modal textarea:focus{border-color:var(--purple)}
+.modal-btns{display:flex;gap:8px;margin-top:12px}
+.modal-btns .btn{flex:1}
+.btn-purple{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-purple:hover{opacity:0.9}
+.auto-loading{display:none;align-items:center;gap:8px;font-size:13px;color:var(--purple);margin-top:10px}
+.auto-loading .spinner{border-color:var(--purple-light);border-top-color:var(--purple)}
+@media(max-width:600px){.two-col,.three-col,.metric-grid{grid-template-columns:1fr}.score-label{width:120px}header{padding:0 16px}.container{padding:16px 12px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">숙소 벤치마킹<span>.</span></div>
+  <div class="header-right">
+    <span class="sync-status" id="sync-status">☁️ 연결 중...</span>
+    <div class="header-count" id="header-count">숙소 0개</div>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <button class="tab active" onclick="showTab('input')">📝 숙소 입력</button>
+  <button class="tab" onclick="showTab('saved')">🏠 저장 목록</button>
+  <button class="tab" onclick="showTab('compare')">📊 비교 분석</button>
+</div>
+
+<div class="container">
+
+<!-- TAB INPUT -->
+<div id="tab-input">
+
+<!-- AI 자동입력 버튼 -->
+<button class="btn-auto" onclick="openAutoModal()">🤖 AI 자동입력 — 숙소 정보 붙여넣으면 자동으로 분석해드려요 ✨</button>
+
+<div class="card">
+  <div class="card-title">기본 정보</div>
+  <div class="two-col">
+    <div class="field"><label>숙소명 / 별명</label><input type="text" id="name" placeholder="예: 성수 감성 스튜디오 A"></div>
+    <div class="field"><label>에어비앤비 URL</label><input type="text" id="url" placeholder="https://airbnb.com/rooms/..."></div>
+  </div>
+  <div class="three-col">
+    <div class="field"><label>지역</label>
+      <select id="region"><option>성수동</option><option>홍대·연남</option><option>이태원·한남</option><option>종로·북촌</option><option>명동·중구</option><option>강남·서초</option><option>마포·합정</option><option>용산</option><option>잠실·송파</option><option>기타</option></select>
+    </div>
+    <div class="field"><label>숙소 유형</label>
+      <select id="stype"><option>원룸/스튜디오</option><option>1베드룸</option><option>2베드룸</option><option>한옥</option><option>독채</option><option>복층</option><option>기타</option></select>
+    </div>
+    <div class="field"><label>최대 인원</label>
+      <select id="capacity"><option>1-2명</option><option>3-4명</option><option>5-6명</option><option>7명+</option></select>
+    </div>
+  </div>
+  <div class="three-col">
+    <div class="field"><label>1박 가격 (원)</label><input type="number" id="price" placeholder="80000"></div>
+    <div class="field"><label>에어비앤비 평점</label><input type="number" id="rating" placeholder="4.85" step="0.01" min="1" max="5"></div>
+    <div class="field"><label>리뷰 수</label><input type="number" id="reviews" placeholder="234"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">항목별 평가 <span style="font-size:10px;color:var(--hint);font-weight:400">(별 클릭)</span></div>
+  <div id="score-items"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">시설 및 편의</div>
+  <div class="tags" id="amenity-tags"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <input type="text" id="custom-amenity-input" placeholder="직접 입력 (예: 빔프로젝터, 족욕기, 안마의자...)" onkeydown="if(event.key==='Enter')addCustomAmenity()" style="flex:1;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:inherit">
+    <button onclick="addCustomAmenity()" style="font-size:13px;padding:8px 16px;border-radius:8px;border:1px solid var(--teal);background:var(--teal-light);color:var(--teal-dark);cursor:pointer;font-family:inherit;white-space:nowrap">+ 추가</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">사진</div>
+  <div style="margin-bottom:10px">
+    <div class="url-input-wrap">
+      <input type="text" id="photo-url-input" placeholder="이미지 주소 붙여넣기 후 엔터 또는 추가 버튼" onkeydown="if(event.key==='Enter')addPhotoFromUrl()">
+      <button onclick="addPhotoFromUrl()">추가</button>
+    </div>
+    <div style="font-size:11px;color:var(--hint)">에어비앤비 사진 우클릭 → 이미지 주소 복사 → 붙여넣기 · 또는 슬롯 클릭·드래그앤드롭</div>
+  </div>
+  <div class="photo-grid" id="photo-grid">
+    <div class="photo-slot" id="slot-0" ondragover="onDragOver(event,0)" ondragleave="onDragLeave(0)" ondrop="onDrop(event,0)" onclick="triggerFileInput(0)"><input type="file" accept="image/*" style="display:none" id="file-0" onchange="onFileChange(event,0)"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span class="slot-label">대표 사진</span><button class="del-btn" onclick="clearSlot(event,0)">×</button></div>
+    <div class="photo-slot" id="slot-1" ondragover="onDragOver(event,1)" ondragleave="onDragLeave(1)" ondrop="onDrop(event,1)" onclick="triggerFileInput(1)"><input type="file" accept="image/*" style="display:none" id="file-1" onchange="onFileChange(event,1)"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span class="slot-label">침실/거실</span><button class="del-btn" onclick="clearSlot(event,1)">×</button></div>
+    <div class="photo-slot" id="slot-2" ondragover="onDragOver(event,2)" ondragleave="onDragLeave(2)" ondrop="onDrop(event,2)" onclick="triggerFileInput(2)"><input type="file" accept="image/*" style="display:none" id="file-2" onchange="onFileChange(event,2)"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span class="slot-label">욕실/주방</span><button class="del-btn" onclick="clearSlot(event,2)">×</button></div>
+    <div class="photo-slot" id="slot-3" ondragover="onDragOver(event,3)" ondragleave="onDragLeave(3)" ondrop="onDrop(event,3)" onclick="triggerFileInput(3)"><input type="file" accept="image/*" style="display:none" id="file-3" onchange="onFileChange(event,3)"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span class="slot-label">마당/외부</span><button class="del-btn" onclick="clearSlot(event,3)">×</button></div>
+    <div class="photo-slot" id="slot-4" ondragover="onDragOver(event,4)" ondragleave="onDragLeave(4)" ondrop="onDrop(event,4)" onclick="triggerFileInput(4)"><input type="file" accept="image/*" style="display:none" id="file-4" onchange="onFileChange(event,4)"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span class="slot-label">추가 사진</span><button class="del-btn" onclick="clearSlot(event,4)">×</button></div>
+    <div class="photo-slot" id="slot-5" ondragover="onDragOver(event,5)" ondragleave="onDragLeave(5)" ondrop="onDrop(event,5)" onclick="triggerFileInput(5)"><input type="file" accept="image/*" style="display:none" id="file-5" onchange="onFileChange(event,5)"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span class="slot-label">추가 사진</span><button class="del-btn" onclick="clearSlot(event,5)">×</button></div>
+  </div>
+  <div class="field"><label>인테리어 포인트 메모</label><textarea id="photo-note" placeholder="예: 간접조명 무드등, 원목 테이블, 화이트 침구, 통창 자연광..."></textarea></div>
+</div>
+
+<div class="card">
+  <div class="card-title">리뷰 분석</div>
+  <div class="two-col">
+    <div class="field"><label>👍 칭찬 키워드</label><input type="text" id="pos-kw" placeholder="예: 청결, 위치, 호스트 친절"></div>
+    <div class="field"><label>👎 불만 키워드</label><input type="text" id="neg-kw" placeholder="예: 주차 불편, 소음, 좁음"></div>
+  </div>
+  <div class="field"><label>종합 리뷰 메모</label><textarea id="review-note" placeholder="전반적인 게스트 반응, 특이점..."></textarea></div>
+</div>
+
+<div class="card">
+  <div class="card-title">벤치마킹 인사이트</div>
+  <div class="field"><label>내 숙소에 접목할 아이디어</label><textarea id="insight" placeholder="이 숙소에서 배울 점..."></textarea></div>
+  <div class="field"><label>잘되는 / 안되는 이유</label><textarea id="reason" placeholder="수요가 높은/낮은 이유 분석..."></textarea></div>
+</div>
+
+<div class="score-summary card" id="score-summary">
+  <div class="card-title">종합 점수</div>
+  <div class="metric-grid" id="metric-grid"></div>
+  <div class="total-row">
+    <div class="total-num" id="total-disp">0점</div>
+    <div class="bar-bg"><div class="bar-fg" id="total-bar" style="background:var(--teal);width:0%"></div></div>
+    <div class="grade" id="grade-badge">-</div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="btn" onclick="calcScore()">📊 점수 계산</button>
+  <button class="btn btn-primary" id="save-btn" onclick="saveEntry()">💾 저장하기</button>
+  <button class="btn" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none;border-color:var(--red);color:var(--red)">✕ 수정 취소</button>
+  <button class="btn" onclick="resetForm()">🔄 초기화</button>
+</div>
+<button class="btn-ai" onclick="aiAnalyze()">🤖 AI 분석 — 잘되는 이유 & 전략 제안 ↗</button>
+<div class="ai-loading" id="ai-loading-input"><div class="spinner"></div>AI 분석 중...</div>
+<div class="ai-result" id="ai-result-input"></div>
+</div>
+
+<!-- TAB SAVED -->
+<div id="tab-saved" style="display:none">
+  <div class="card">
+    <div class="card-title">저장된 벤치마킹 숙소</div>
+    <div id="saved-list"><div class="empty">저장된 숙소가 없어요.</div></div>
+  </div>
+</div>
+
+<!-- TAB COMPARE -->
+<div id="tab-compare" style="display:none">
+  <div class="card">
+    <div class="card-title">항목별 비교 분석</div>
+    <div id="compare-area"><div class="empty">숙소를 2개 이상 저장하면 비교 분석이 활성화돼요.</div></div>
+  </div>
+  <button class="btn-ai" id="compare-ai-btn" style="display:none" onclick="aiCompareAll()">🤖 AI 전체 비교 분석 ↗</button>
+  <div class="ai-loading" id="ai-loading-compare"><div class="spinner"></div>AI 비교 분석 중...</div>
+  <div class="ai-result" id="ai-result-compare"></div>
+</div>
+
+</div>
+
+<!-- AI 자동입력 모달 -->
+<div class="modal-overlay" id="auto-modal">
+  <div class="modal">
+    <div class="modal-title">🤖 AI 자동입력</div>
+    <div class="modal-desc">에어비앤비 숙소 페이지의 텍스트를 복사해서 붙여넣으세요.<br>숙소명, 가격, 평점, 리뷰, 편의시설 등을 자동으로 분석해서 채워드려요.</div>
+    <textarea id="auto-input" placeholder="숙소 제목, 설명, 편의시설, 리뷰 내용 등을 여기에 붙여넣으세요...&#10;&#10;예시:&#10;[오픈할인] 전직 승무원의 햇살 가득 감성 2층 숙소&#10;광진구, 한국의 집 전체&#10;최대 인원 6명 · 침실 2개 · 침대 3개 · 욕실 1개&#10;★ 5.0 · 후기 3개&#10;₩737,896 / 5박..."></textarea>
+    <div class="auto-loading" id="auto-loading"><div class="spinner"></div>AI가 분석하고 있어요...</div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeAutoModal()">취소</button>
+      <button class="btn btn-purple" onclick="runAutoFill()">✨ 자동 분석 & 입력</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://ycbxtwhitgniszgnjscd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljYnh0d2hpdGduaXN6Z25qc2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4ODUzNDcsImV4cCI6MjA5NzQ2MTM0N30.Ux2qXADbTP0f2SDZ-QSq4g9lLsti3o2AIbz6X_To03E';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const SCORES=[
+  {key:'location',label:'입지 / 접근성',weight:20},
+  {key:'interior',label:'인테리어 / 사진 품질',weight:20},
+  {key:'cleanliness',label:'청결도',weight:15},
+  {key:'host',label:'호스트 응대',weight:15},
+  {key:'valueprice',label:'가성비',weight:15},
+  {key:'amenity',label:'편의시설',weight:15},
+];
+const AMENITIES=['와이파이','넷플릭스','세탁기','건조기','에어컨','난방','주방','전자레인지','커피머신','인덕션','주차','자전거','루프탑','한강뷰','야외공간','조식','셀프체크인','반려동물','금연','짐보관','욕조','스파/자쿠지'];
+
+let scores={};
+let entries=[];
+let selAmenities=new Set();
+let slotImages=['','','','','',''];
+let editingId=null;
+
+async function loadEntries(){
+  try{
+    const {data,error}=await sb.from('benchmarks').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    entries=data||[];
+    updateHeaderCount();
+    document.getElementById('sync-status').textContent='☁️ 동기화됨';
+  }catch(e){
+    document.getElementById('sync-status').textContent='⚠️ 오프라인';
+    console.error(e);
+  }
+}
+
+async function dbSave(entry){
+  const row={
+    name:entry.name,region:entry.region,stype:entry.stype,capacity:entry.capacity,
+    price:entry.price?parseInt(entry.price):null,
+    rating:entry.rating?parseFloat(entry.rating):null,
+    reviews:entry.reviews?parseInt(entry.reviews):null,
+    url:entry.url,scores:entry.scores,amenities:entry.amenities,
+    photos:entry.photos,photo_note:entry.photoNote,
+    pos_kw:entry.posKw,neg_kw:entry.negKw,
+    review_note:entry.reviewNote,insight:entry.insight,
+    reason:entry.reason,total:entry.total,
+    updated_at:new Date().toISOString()
+  };
+  if(editingId){
+    const {error}=await sb.from('benchmarks').update(row).eq('id',editingId);
+    if(error) throw error;
+  } else {
+    const {data,error}=await sb.from('benchmarks').insert([row]).select();
+    if(error) throw error;
+    return data[0];
+  }
+}
+
+async function dbDelete(id){
+  const {error}=await sb.from('benchmarks').delete().eq('id',id);
+  if(error) throw error;
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function init(){
+  const si=document.getElementById('score-items');
+  SCORES.forEach(s=>{
+    scores[s.key]=0;
+    const row=document.createElement('div');
+    row.className='score-row';
+    row.innerHTML=`<span class="score-label">${s.label}<span class="score-weight">×${s.weight}%</span></span>
+    <div class="stars" id="stars-${s.key}">${[1,2,3,4,5].map(n=>`<button class="star" onclick="setStar('${s.key}',${n})">★</button>`).join('')}</div>
+    <span class="score-num" id="sv-${s.key}">0</span>`;
+    si.appendChild(row);
+  });
+  const at=document.getElementById('amenity-tags');
+  AMENITIES.forEach(a=>{
+    const t=document.createElement('span');
+    t.className='tag';t.textContent=a;
+    t.onclick=()=>{if(selAmenities.has(a)){selAmenities.delete(a);t.classList.remove('on');}else{selAmenities.add(a);t.classList.add('on');}};
+    at.appendChild(t);
+  });
+  loadEntries();
+}
+
+function setStar(key,val){
+  scores[key]=val;
+  document.querySelectorAll(`#stars-${key} .star`).forEach((s,i)=>s.classList.toggle('on',i<val));
+  document.getElementById(`sv-${key}`).textContent=val;
+}
+
+function calcScore(){
+  let total=0;
+  SCORES.forEach(s=>{total+=scores[s.key]*s.weight/5;});
+  total=Math.round(total);
+  let grade,gc,gb;
+  if(total>=85){grade='S급 우수';gc='#085041';gb='#E1F5EE';}
+  else if(total>=70){grade='A급 양호';gc='#0C447C';gb='#E6F1FB';}
+  else if(total>=55){grade='B급 보통';gc='#633806';gb='#FAEEDA';}
+  else{grade='C급 개선필요';gc='#791F1F';gb='#FCEBEB';}
+  document.getElementById('score-summary').style.display='block';
+  document.getElementById('total-disp').textContent=total+'점';
+  document.getElementById('total-bar').style.width=total+'%';
+  const gb2=document.getElementById('grade-badge');
+  gb2.textContent=grade;gb2.style.background=gb;gb2.style.color=gc;
+  const mg=document.getElementById('metric-grid');mg.innerHTML='';
+  [{l:'입지·사진',k:['location','interior']},{l:'서비스',k:['cleanliness','host']},{l:'가성비·시설',k:['valueprice','amenity']}].forEach(c=>{
+    mg.innerHTML+=`<div class="metric"><div class="metric-label">${c.l}</div><div class="metric-val">${Math.round(c.k.reduce((a,k)=>a+scores[k],0)/c.k.length*20)}점</div></div>`;
+  });
+  mg.innerHTML+=`<div class="metric"><div class="metric-label">편의 수</div><div class="metric-val">${selAmenities.size}개</div></div>`;
+  return total;
+}
+
+async function saveEntry(){
+  const nm=document.getElementById('name').value.trim()||'이름 없음';
+  const score=calcScore();
+  const entry={
+    name:nm,region:document.getElementById('region').value,
+    stype:document.getElementById('stype').value,capacity:document.getElementById('capacity').value,
+    price:document.getElementById('price').value,rating:document.getElementById('rating').value,
+    reviews:document.getElementById('reviews').value,url:document.getElementById('url').value.trim(),
+    scores:{...scores},amenities:[...selAmenities],photos:[...slotImages],
+    photoNote:document.getElementById('photo-note').value,
+    posKw:document.getElementById('pos-kw').value,negKw:document.getElementById('neg-kw').value,
+    reviewNote:document.getElementById('review-note').value,
+    insight:document.getElementById('insight').value,reason:document.getElementById('reason').value,
+    total:score
+  };
+  try{
+    document.getElementById('save-btn').textContent='저장 중...';
+    await dbSave(entry);
+    await loadEntries();
+    showToast(editingId?'✅ 수정 저장됐어요!':'✅ 저장됐어요!');
+    editingId=null;
+    updateSaveBtn();
+    renderSaved();
+    showTab('saved');
+  }catch(e){
+    showToast('❌ 저장 실패: '+e.message);
+  }finally{
+    updateSaveBtn();
+  }
+}
+
+function editEntry(id){
+  const e=entries.find(x=>x.id===id);
+  if(!e) return;
+  editingId=id;
+  document.getElementById('name').value=e.name||'';
+  document.getElementById('region').value=e.region||'성수동';
+  document.getElementById('stype').value=e.stype||'원룸/스튜디오';
+  document.getElementById('capacity').value=e.capacity||'1-2명';
+  document.getElementById('price').value=e.price||'';
+  document.getElementById('rating').value=e.rating||'';
+  document.getElementById('reviews').value=e.reviews||'';
+  document.getElementById('url').value=e.url||'';
+  document.getElementById('photo-note').value=e.photo_note||'';
+  document.getElementById('pos-kw').value=e.pos_kw||'';
+  document.getElementById('neg-kw').value=e.neg_kw||'';
+  document.getElementById('review-note').value=e.review_note||'';
+  document.getElementById('insight').value=e.insight||'';
+  document.getElementById('reason').value=e.reason||'';
+  SCORES.forEach(s=>setStar(s.key,(e.scores||{})[s.key]||0));
+  selAmenities.clear();
+  document.querySelectorAll('.tag').forEach(t=>t.classList.remove('on'));
+  (e.amenities||[]).forEach(a=>{selAmenities.add(a);document.querySelectorAll('.tag').forEach(t=>{if(t.textContent===a)t.classList.add('on');});});
+  slotImages=['','','','','',''];
+  for(let i=0;i<6;i++){
+    const src=(e.photos||[])[i]||'';
+    if(src)setSlotImage(i,src);
+    else{const slot=document.getElementById('slot-'+i);const img=slot?.querySelector('img');if(img)img.remove();const svg=slot?.querySelector('svg');const lbl=slot?.querySelector('.slot-label');if(svg)svg.style.display='';if(lbl)lbl.style.display='';}
+  }
+  calcScore();
+  updateSaveBtn();
+  showTab('input');
+  window.scrollTo(0,0);
+}
+
+function cancelEdit(){editingId=null;resetForm();updateSaveBtn();}
+
+function updateSaveBtn(){
+  const btn=document.getElementById('save-btn');
+  const cancelBtn=document.getElementById('cancel-edit-btn');
+  if(editingId){
+    btn.textContent='✏️ 수정 저장';btn.style.background='#378ADD';btn.style.borderColor='#378ADD';
+    if(cancelBtn)cancelBtn.style.display='';
+  }else{
+    btn.textContent='💾 저장하기';btn.style.background='var(--teal)';btn.style.borderColor='var(--teal)';
+    if(cancelBtn)cancelBtn.style.display='none';
+  }
+}
+
+async function deleteEntry(id){
+  if(!confirm('삭제할까요?'))return;
+  try{
+    await dbDelete(id);
+    await loadEntries();
+    renderSaved();
+    renderCompare();
+    showToast('🗑️ 삭제됐어요');
+  }catch(e){showToast('❌ 삭제 실패');}
+}
+
+function updateHeaderCount(){
+  document.getElementById('header-count').textContent=`숙소 ${entries.length}개`;
+}
+
+function gradeStyle(total){
+  if(total>=85)return{gc:'#085041',gb:'#E1F5EE'};
+  if(total>=70)return{gc:'#0C447C',gb:'#E6F1FB'};
+  if(total>=55)return{gc:'#633806',gb:'#FAEEDA'};
+  return{gc:'#791F1F',gb:'#FCEBEB'};
+}
+
+function renderSaved(){
+  const sl=document.getElementById('saved-list');
+  if(!entries.length){sl.innerHTML='<div class="empty">저장된 숙소가 없어요.</div>';return;}
+  const sorted=[...entries].sort((a,b)=>b.total-a.total);
+  sl.innerHTML=sorted.map(e=>{
+    const{gc,gb}=gradeStyle(e.total);
+    const thumb=(e.photos||[]).find(p=>p)?`<img src="${(e.photos||[]).find(p=>p)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;margin-right:12px" onerror="this.remove()">` :'';
+    const dt=e.updated_at?new Date(e.updated_at).toLocaleDateString('ko-KR'):new Date(e.created_at).toLocaleDateString('ko-KR');
+    return`<div class="saved-item">
+      ${thumb}
+      <div class="saved-left">
+        <div class="saved-name">${e.name}<span class="region-badge">${e.region}</span></div>
+        <div class="saved-meta">${e.stype} · ${e.capacity} · ${e.price?Number(e.price).toLocaleString()+'원/박':'가격 미입력'} · ⭐${e.rating||'-'} (${e.reviews||0}개) · ${dt}</div>
+        ${e.pos_kw?`<div class="saved-kw">👍 ${e.pos_kw}${e.neg_kw?' | 👎 '+e.neg_kw:''}</div>`:''}
+        ${e.url?`<a class="url-link" href="${e.url}" target="_blank">🔗 에어비앤비 보기</a>`:''}
+      </div>
+      <div class="saved-right">
+        <span class="score-pill" style="background:${gb};color:${gc}">${e.total}점</span>
+        <button class="small-btn" onclick="editEntry(${e.id})" style="color:#185FA5;border-color:#185FA5">✏️ 수정</button>
+        <button class="small-btn" onclick="aiSingleAnalyze(${e.id})">AI 분석 ↗</button>
+        <button class="small-btn" onclick="deleteEntry(${e.id})" style="color:var(--red);border-color:var(--red)">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCompare(){
+  const ca=document.getElementById('compare-area');
+  const btn=document.getElementById('compare-ai-btn');
+  if(entries.length<2){ca.innerHTML='<div class="empty">숙소를 2개 이상 저장하면 비교 분석이 활성화돼요.</div>';btn.style.display='none';return;}
+  btn.style.display='block';
+  const top=[...entries].sort((a,b)=>b.total-a.total).slice(0,5);
+  const rows=[
+    {l:'지역',fn:e=>e.region},{l:'유형',fn:e=>e.stype},{l:'인원',fn:e=>e.capacity},
+    {l:'가격',fn:e=>e.price?Number(e.price).toLocaleString()+'원':'-'},
+    {l:'평점',fn:e=>e.rating||'-'},{l:'리뷰',fn:e=>e.reviews?Number(e.reviews)+'개':'-'},
+    {l:'종합점수',fn:e=>e.total+'점',bold:true},
+  ];
+  SCORES.forEach(s=>rows.push({l:s.label.split('/')[0].trim(),fn:e=>(e.scores||{})[s.key]+'점'}));
+  rows.push({l:'편의시설',fn:e=>(e.amenities||[]).length+'개'});
+  let html=`<div style="overflow-x:auto"><table class="compare-table"><thead><tr><th>항목</th>${top.map(e=>`<th>${e.name.slice(0,8)}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const vals=top.map(e=>r.fn(e));
+    const nums=vals.map(v=>parseFloat(String(v).replace(/,/g,''))).filter(n=>!isNaN(n));
+    const max=nums.length>1?Math.max(...nums):null;
+    html+=`<tr><td style="${r.bold?'font-weight:500':'color:var(--muted)'}">${r.l}</td>`;
+    top.forEach((e,i)=>{const v=vals[i];const n=parseFloat(String(v).replace(/,/g,''));html+=`<td class="${max!==null&&n===max&&nums.length>1?'best':''}">${v}</td>`;});
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  ca.innerHTML=html;
+}
+
+function resetForm(){
+  editingId=null;
+  ['name','url','price','rating','reviews','photo-note','pos-kw','neg-kw','review-note','insight','reason'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  SCORES.forEach(s=>{scores[s.key]=0;setStar(s.key,0);});
+  selAmenities.clear();
+  document.querySelectorAll('.tag').forEach(t=>t.classList.remove('on'));
+  slotImages=['','','','','',''];
+  for(let i=0;i<6;i++){const slot=document.getElementById('slot-'+i);if(!slot)continue;const img=slot.querySelector('img');if(img)img.remove();const svg=slot.querySelector('svg');const lbl=slot.querySelector('.slot-label');if(svg)svg.style.display='';if(lbl)lbl.style.display='';}
+  document.getElementById('score-summary').style.display='none';
+  document.getElementById('ai-result-input').style.display='none';
+  updateSaveBtn();
+}
+
+// PHOTO
+function triggerFileInput(idx){document.getElementById('file-'+idx).click();}
+function onFileChange(e,idx){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>setSlotImage(idx,ev.target.result);reader.readAsDataURL(file);}
+function onDragOver(e,idx){e.preventDefault();e.stopPropagation();document.getElementById('slot-'+idx).classList.add('drag-over');}
+function onDragLeave(idx){document.getElementById('slot-'+idx).classList.remove('drag-over');}
+function onDrop(e,idx){e.preventDefault();e.stopPropagation();document.getElementById('slot-'+idx).classList.remove('drag-over');const file=e.dataTransfer.files[0];if(file&&file.type.startsWith('image/')){const reader=new FileReader();reader.onload=ev=>setSlotImage(idx,ev.target.result);reader.readAsDataURL(file);return;}const url=e.dataTransfer.getData('text/plain')||e.dataTransfer.getData('text/uri-list');if(url)setSlotImage(idx,url);}
+function setSlotImage(idx,src){slotImages[idx]=src;const slot=document.getElementById('slot-'+idx);let img=slot.querySelector('img');if(!img){img=document.createElement('img');slot.appendChild(img);}img.src=src;img.onerror=()=>{img.remove();slotImages[idx]='';};const svg=slot.querySelector('svg');const lbl=slot.querySelector('.slot-label');if(svg)svg.style.display='none';if(lbl){lbl.style.position='absolute';lbl.style.bottom='0';lbl.style.left='0';lbl.style.right='0';lbl.style.background='rgba(0,0,0,0.45)';lbl.style.color='#fff';lbl.style.padding='3px 6px';lbl.style.fontSize='10px';lbl.style.textAlign='center';}}
+function clearSlot(e,idx){e.stopPropagation();e.preventDefault();slotImages[idx]='';const slot=document.getElementById('slot-'+idx);const img=slot.querySelector('img');if(img)img.remove();const svg=slot.querySelector('svg');const lbl=slot.querySelector('.slot-label');if(svg)svg.style.display='';if(lbl){lbl.style.position='';lbl.style.background='';lbl.style.color='';lbl.style.padding='';lbl.style.bottom='';lbl.style.left='';lbl.style.right='';}}
+function addPhotoFromUrl(){
+  const input=document.getElementById('photo-url-input');
+  const url=input.value.trim();
+  if(!url){showToast('이미지 주소를 입력해주세요');return;}
+  const idx=slotImages.findIndex(s=>!s);
+  setSlotImage(idx>=0?idx:0,url);
+  input.value='';
+  showToast('✅ 사진이 추가됐어요!');
+}
+
+function addCustomAmenity(){
+  const input=document.getElementById('custom-amenity-input');
+  const val=input.value.trim();
+  if(!val)return;
+  if(selAmenities.has(val)){showToast('이미 추가된 항목이에요');return;}
+  const at=document.getElementById('amenity-tags');
+  const t=document.createElement('span');
+  t.className='tag on';t.textContent=val;
+  t.onclick=()=>{if(selAmenities.has(val)){selAmenities.delete(val);t.classList.remove('on');}else{selAmenities.add(val);t.classList.add('on');}};
+  at.appendChild(t);
+  selAmenities.add(val);
+  input.value='';
+  showToast('✅ "'+val+'" 추가됐어요!');
+}
+
+// AI 자동입력
+function openAutoModal(){
+  document.getElementById('auto-modal').classList.add('show');
+  document.getElementById('auto-input').value='';
+}
+function closeAutoModal(){
+  document.getElementById('auto-modal').classList.remove('show');
+}
+document.getElementById('auto-modal').addEventListener('click',function(e){
+  if(e.target===this)closeAutoModal();
+});
+
+async function runAutoFill(){
+  const text=document.getElementById('auto-input').value.trim();
+  if(!text){showToast('텍스트를 붙여넣어주세요');return;}
+  const loading=document.getElementById('auto-loading');
+  loading.style.display='flex';
+
+  const prompt=`당신은 에어비앤비 숙소 분석 전문가입니다. 아래 숙소 정보를 분석해서 반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+
+숙소 정보:
+${text}
+
+다음 JSON 구조로 정확히 응답하세요:
+{
+  "name": "숙소명 (간결하게)",
+  "region": "성수동|홍대·연남|이태원·한남|종로·북촌|명동·중구|강남·서초|마포·합정|용산|잠실·송파|기타 중 하나",
+  "stype": "원룸/스튜디오|1베드룸|2베드룸|한옥|독채|복층|기타 중 하나",
+  "capacity": "1-2명|3-4명|5-6명|7명+ 중 하나",
+  "price": 1박가격숫자만(없으면null),
+  "rating": 평점숫자(없으면null),
+  "reviews": 리뷰수숫자(없으면null),
+  "scores": {
+    "location": 1-5점 정수,
+    "interior": 1-5점 정수,
+    "cleanliness": 1-5점 정수,
+    "host": 1-5점 정수,
+    "valueprice": 1-5점 정수,
+    "amenity": 1-5점 정수
+  },
+  "amenities": ["와이파이","넷플릭스","세탁기","건조기","에어컨","난방","주방","전자레인지","커피머신","인덕션","주차","자전거","루프탑","한강뷰","야외공간","조식","셀프체크인","반려동물","금연","짐보관","욕조","스파/자쿠지"] 중 해당하는 것들의 배열,
+  "pos_kw": "칭찬 키워드 쉼표 구분",
+  "neg_kw": "불만 키워드 쉼표 구분",
+  "photo_note": "인테리어 특징 요약",
+  "insight": "이 숙소의 성공 요인 및 배울 점",
+  "reason": "잘되는 이유와 안되는 이유 분석"
+}
+
+점수 기준:
+- location: 역 도보 5분 이내=5, 10분=4, 15분=3, 20분+=2, 불명확=3
+- interior: 사진/인테리어 품질, 감성적일수록 높음
+- cleanliness: 리뷰에 청결 언급 많을수록 높음
+- host: 슈퍼호스트/응대 좋을수록 높음
+- valueprice: 가격 대비 시설/위치 종합
+- amenity: 편의시설 많고 좋을수록 높음`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const raw=data.content?.map(c=>c.text||'').join('');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+
+    // 폼 채우기
+    resetForm();
+    if(parsed.name)document.getElementById('name').value=parsed.name;
+    if(parsed.region){const s=document.getElementById('region');for(let o of s.options)if(o.value===parsed.region){s.value=parsed.region;break;}}
+    if(parsed.stype){const s=document.getElementById('stype');for(let o of s.options)if(o.value===parsed.stype){s.value=parsed.stype;break;}}
+    if(parsed.capacity){const s=document.getElementById('capacity');for(let o of s.options)if(o.value===parsed.capacity){s.value=parsed.capacity;break;}}
+    if(parsed.price)document.getElementById('price').value=parsed.price;
+    if(parsed.rating)document.getElementById('rating').value=parsed.rating;
+    if(parsed.reviews)document.getElementById('reviews').value=parsed.reviews;
+    if(parsed.pos_kw)document.getElementById('pos-kw').value=parsed.pos_kw;
+    if(parsed.neg_kw)document.getElementById('neg-kw').value=parsed.neg_kw;
+    if(parsed.photo_note)document.getElementById('photo-note').value=parsed.photo_note;
+    if(parsed.insight)document.getElementById('insight').value=parsed.insight;
+    if(parsed.reason)document.getElementById('reason').value=parsed.reason;
+
+    // 별점
+    if(parsed.scores){
+      Object.entries(parsed.scores).forEach(([k,v])=>setStar(k,Math.min(5,Math.max(1,parseInt(v)||0))));
+    }
+
+    // 편의시설
+    if(parsed.amenities&&Array.isArray(parsed.amenities)){
+      parsed.amenities.forEach(a=>{
+        selAmenities.add(a);
+        document.querySelectorAll('.tag').forEach(t=>{if(t.textContent===a)t.classList.add('on');});
+      });
+    }
+
+    calcScore();
+    closeAutoModal();
+    showToast('✅ 자동 입력 완료! 내용을 확인하고 저장해주세요.');
+  }catch(e){
+    showToast('❌ 분석 실패. 다시 시도해주세요.');
+    console.error(e);
+  }finally{
+    loading.style.display='none';
+  }
+}
+
+// AI 분석
+async function callAI(prompt,loadingId,resultId){
+  const loading=document.getElementById(loadingId);const result=document.getElementById(resultId);
+  loading.style.display='flex';result.style.display='none';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    result.textContent=data.content?.map(c=>c.text||'').join('\n')||'분석 결과 없음';
+    result.style.display='block';
+  }catch(e){result.textContent='AI 분석 오류. 다시 시도해주세요.';result.style.display='block';}
+  finally{loading.style.display='none';}
+}
+
+function aiAnalyze(){
+  const nm=document.getElementById('name').value||'분석 숙소';
+  const prompt=`에어비앤비 단기임대 전문 컨설턴트로서 아래 숙소를 분석해줘.
+숙소: ${nm} / 지역: ${document.getElementById('region').value} / 가격: ${document.getElementById('price').value}원/박 / 평점: ${document.getElementById('rating').value} (리뷰 ${document.getElementById('reviews').value}개)
+항목별 점수: ${SCORES.map(s=>`${s.label}:${scores[s.key]}점`).join(', ')}
+편의시설: ${[...selAmenities].join(',')}
+인테리어: ${document.getElementById('photo-note').value}
+칭찬: ${document.getElementById('pos-kw').value} / 불만: ${document.getElementById('neg-kw').value}
+
+1) 잘되는/안되는 핵심 이유
+2) 인테리어·운영 참고 포인트
+3) 새 숙소 기획 시 접목할 전략 3가지`;
+  callAI(prompt,'ai-loading-input','ai-result-input');
+}
+
+function aiSingleAnalyze(id){
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  const prompt=`에어비앤비 단기임대 전문 컨설턴트로서 분석해줘.
+숙소: ${e.name} / 지역: ${e.region} / 유형: ${e.stype} / 가격: ${e.price}원/박 / 평점: ${e.rating} (리뷰 ${e.reviews}개) / 종합점수: ${e.total}점
+칭찬: ${e.pos_kw||'없음'} / 불만: ${e.neg_kw||'없음'}
+
+1) 잘되는/안되는 이유
+2) 새 숙소 기획 시 배울 점 3가지
+3) 인테리어·가격·운영 개선 제안`;
+  showTab('saved');callAI(prompt,'ai-loading-input','ai-result-input');
+}
+
+function aiCompareAll(){
+  const summary=entries.map(e=>`[${e.name}] ${e.region} ${e.price}원 평점${e.rating} ${e.total}점 칭찬:${e.pos_kw||'없음'} 불만:${e.neg_kw||'없음'}`).join('\n');
+  callAI(`에어비앤비 전문 컨설턴트로서 내가 벤치마킹한 서울 숙소들을 비교해줘.\n\n${summary}\n\n1) 고점수 숙소 공통 패턴\n2) 저점수 숙소 문제점\n3) 새 숙소 선택 시 우선순위 기준 5가지\n4) 인테리어 방향성 제안`,'ai-loading-compare','ai-result-compare');
+}
+
+function showTab(t){
+  ['input','saved','compare'].forEach((n,i)=>{
+    document.getElementById('tab-'+n).style.display=n===t?'block':'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active',n===t);
+  });
+  if(t==='saved')renderSaved();
+  if(t==='compare')renderCompare();
+}
+
+init();
+</script>
+</body>
+</html>
