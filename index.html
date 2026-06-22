@@ -650,7 +650,7 @@ ${text}
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true','anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true','anthropic-version':'2023-06-01','x-api-key':'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'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})
     });
     const data=await res.json();
@@ -702,7 +702,7 @@ async function callAI(prompt,loadingId,resultId){
   const loading=document.getElementById(loadingId);const result=document.getElementById(resultId);
   loading.style.display='flex';result.style.display='none';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true','anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true','anthropic-version':'2023-06-01','x-api-key':'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'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     result.textContent=data.content?.map(c=>c.text||'').join('\n')||'분석 결과 없음';
     result.style.display='block';
